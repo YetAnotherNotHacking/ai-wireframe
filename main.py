@@ -109,7 +109,7 @@ def draw_body_wireframe(image, landmarks, debug=False):
         cv2.line(image, start_point, end_point, (255, 0, 255), 2)
 
 # Function to draw face mesh
-def draw_face_mesh(image, face_landmarks, debug=True, clown=True):
+def draw_face_mesh(image, face_landmarks, debug=False, clown=True):
     # Draw connections
     connections = mp.solutions.face_mesh.FACEMESH_TESSELATION
     for connection in connections:
@@ -206,12 +206,50 @@ def render_human_model(body_landmarks):
         pygame.display.flip()
         pygame.time.wait(10)
 
-def render_human_model_thread(body_landmarks):
-    thread = threading.Thread(target=render_human_model, args=(body_landmarks,))
-    thread.start()
 
 
 
+
+
+def run_rendering():
+    # Initialize MediaPipe Pose model
+    mp_pose = mp.solutions.pose.Pose()
+    # Open default camera
+    cap = cv2.VideoCapture(0)
+    # Initialize Pygame and create a window
+    pygame.init()
+    screen = pygame.display.set_mode((800, 600), DOUBLEBUF|OPENGL)
+    # Set the perspective for the 3D scene
+    gluPerspective(45, (800/600), 0.1, 50.0)
+    glTranslatef(0.0, 0.0, -5)
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            print("Error: Couldn't read frame")
+            break
+        # Convert the frame to RGB
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # Process the frame with MediaPipe Pose
+        results_pose = mp_pose.process(frame_rgb)
+        # Draw body wireframe
+        if results_pose.pose_landmarks:
+            body_landmarks = [(int(l.x * frame.shape[1]), int(l.y * frame.shape[0])) for l in results_pose.pose_landmarks.landmark]
+            draw_body_wireframe(frame, body_landmarks)
+        # Display the resulting frame
+        cv2.imshow('Tracking Test 1', frame)
+        # Check for exit key (press 'q' to exit)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+        # Update the Pygame window
+        pygame.display.flip()
+        pygame.time.wait(10)
+    # Release the camera and close OpenCV windows
+    cap.release()
+    cv2.destroyAllWindows()
+
+# Run the rendering function in the background using threading
+render_thread = threading.Thread(target=run_rendering)
+render_thread.start()
 
 
 
@@ -277,10 +315,7 @@ def process_video():
                     # Add text the the left/right of the circle
                     cv2.putText(frame, "Touch little", (landmark_px[20][0] + 30, landmark_px[20][1]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1, cv2.LINE_AA)
 
-        # Draw body wireframe
-        if results_pose.pose_landmarks:
-            landmark_px = [(int(l.x * frame.shape[1]), int(l.y * frame.shape[0])) for l in results_pose.pose_landmarks.landmark]
-            draw_body_wireframe(frame, landmark_px, debug=True)
+
 
 
         # Draw face mesh
@@ -292,13 +327,18 @@ def process_video():
                 landmark_px = [(int(l.x * frame.shape[1]), int(l.y * frame.shape[0])) for l in face_landmarks.landmark]
                 draw_face_mesh(frame, face_landmarks)
 
+        # Make new window showing the human model
+        if results_pose.pose_landmarks:
+            body_landmarks = [(int(l.x * frame.shape[1]), int(l.y * frame.shape[0])) for l in results_pose.pose_landmarks.landmark]
+            draw_body_wireframe(frame, body_landmarks)
+
 
         # Make neck
         # Connect point 11 from the body to 152 on the face mesh
         if results_pose.pose_landmarks and results_face_mesh.multi_face_landmarks:
             body_landmarks = [(int(l.x * frame.shape[1]), int(l.y * frame.shape[0])) for l in results_pose.pose_landmarks.landmark]
             face_landmarks = [(int(l.x * frame.shape[1]), int(l.y * frame.shape[0])) for l in results_face_mesh.multi_face_landmarks[0].landmark]
-            render_human_model_thread(body_landmarks)
+            # render_human_model_thread(body_landmarks)
             # Create a new process for the second window
             cv2.line(frame, body_landmarks[11], face_landmarks[377], (100, 25, 255), 2)
         # Connect point 12 from the body to 152 on the face mesh
@@ -319,6 +359,10 @@ def process_video():
 
         # Display the resulting frame
         cv2.imshow('Tracking Test 1', frame)
+
+
+
+
 
         # Check for exit key (press 'q' to exit)
         if cv2.waitKey(1) & 0xFF == ord('q'):

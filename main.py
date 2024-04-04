@@ -55,7 +55,7 @@ def draw_hand_wireframe(image, hand_landmarks):
 
 # Function to check if the fingertip touches the thumb
 def detect_fingertip_touch(hand_landmarks, threshold=40, finger="pointer"):
-    # Define connections between hand landmarks to check fingertip touch, meaning 4 and 8 touching
+    # Define connections between hand landmarks to check fingertip touch, meaning 4 and 8 touching, or other ones from the different fingers
     if finger == "pointer":
         connections = [(4, 8)]
     elif finger == "middle":

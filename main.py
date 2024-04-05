@@ -55,7 +55,7 @@ def draw_hand_wireframe(image, hand_landmarks):
 
 # Function to check if the fingertip touches the thumb
 def detect_fingertip_touch(hand_landmarks, threshold=40, finger="pointer"):
-    # Define connections between hand landmarks to check fingertip touch, meaning 4 and 8 touching, or other ones from the different fingers
+    # Define connections between hand landmarks to check fingertip touch, meaning 4 and 8 touching
     if finger == "pointer":
         connections = [(4, 8)]
     elif finger == "middle":
@@ -211,45 +211,6 @@ def render_human_model(body_landmarks):
 
 
 
-def run_rendering():
-    # Initialize MediaPipe Pose model
-    mp_pose = mp.solutions.pose.Pose()
-    # Open default camera
-    cap = cv2.VideoCapture(0)
-    # Initialize Pygame and create a window
-    pygame.init()
-    screen = pygame.display.set_mode((800, 600), DOUBLEBUF|OPENGL)
-    # Set the perspective for the 3D scene
-    gluPerspective(45, (800/600), 0.1, 50.0)
-    glTranslatef(0.0, 0.0, -5)
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            print("Error: Couldn't read frame")
-            break
-        # Convert the frame to RGB
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        # Process the frame with MediaPipe Pose
-        results_pose = mp_pose.process(frame_rgb)
-        # Draw body wireframe
-        if results_pose.pose_landmarks:
-            body_landmarks = [(int(l.x * frame.shape[1]), int(l.y * frame.shape[0])) for l in results_pose.pose_landmarks.landmark]
-            draw_body_wireframe(frame, body_landmarks)
-        # Display the resulting frame
-        cv2.imshow('Tracking Test 1', frame)
-        # Check for exit key (press 'q' to exit)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-        # Update the Pygame window
-        pygame.display.flip()
-        pygame.time.wait(10)
-    # Release the camera and close OpenCV windows
-    cap.release()
-    cv2.destroyAllWindows()
-
-# Run the rendering function in the background using threading
-render_thread = threading.Thread(target=run_rendering)
-render_thread.start()
 
 
 
